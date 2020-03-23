@@ -2,6 +2,9 @@
 
 import boto3
 import os
+import json
+import csv
+import gzip
 
 # Objective 1: Download CloudTrail logs
 # Step1: Setup CLI.
@@ -54,3 +57,24 @@ print(target_security_client.get_caller_identity())
 s3_target_security = boto3.Session(profile_name='target_security').resource('s3')
 s3_client_target_security = boto3.Session(profile_name='target_security').client('s3')
 print(s3_client_target_security.list_buckets())
+
+# Objective 3: Read Log Data
+
+# Open log files
+# Step 1: Find all of the files in the directory
+# Step 2: Open the files (use gzip.open()) and print the file contents somewhere useful in a tsv/csv format.
+# ToDo (smorton): Make this scale.
+def logs_to_csv():
+    with open('output.tsv', 'w') as output_file, gzip.open('test/AWSLogs/653711331788/CloudTrail/us-east-1/2018/11/28/653711331788_CloudTrail_us-east-1_20181128T2310Z_rp9i9zxR2Vcpqfnz.json.gz', 'rt') as json_file:
+        json_dict = json.load(json_file)
+        cleaned_dict = json_dict['Records'][0]
+        # Build a dictionary that only has the keys and values that we care about for our analysis.
+        final_dict = dict((k, cleaned_dict[k]) for k in ('eventTime', 'sourceIPAddress', 'eventName'))
+        identity_dict = dict((k, cleaned_dict['userIdentity'][k]) for k in ('accountId', 'type'))
+        final_dict.update(identity_dict)
+        # Write to tsv file.
+        dw = csv.DictWriter(output_file, final_dict.keys(), delimiter='\t')
+        dw.writeheader()
+        dw.writerow(final_dict)
+
+logs_to_csv()
