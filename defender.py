@@ -41,5 +41,16 @@ def s3_sync(bucket, target_directory):
         if obj_filename not in files:
             bucket.download_file(obj_filename, os.path.join(target_directory, obj_filename))
 
+# Download the files.
 s3_sync(flaws2_logs_bucket, 'test')
 
+# Objective 2: Access the target account.
+
+# Define sts client for target_security and get the target_security caller identity.
+target_security_client = boto3.Session(profile_name='target_security').client('sts')
+print(target_security_client.get_caller_identity())
+
+# Define target_security and list its buckets.
+s3_target_security = boto3.Session(profile_name='target_security').resource('s3')
+s3_client_target_security = boto3.Session(profile_name='target_security').client('s3')
+print(s3_client_target_security.list_buckets())
