@@ -71,10 +71,7 @@ print(s3_client_target_security.list_buckets())
 
 # Objective 3: Read Log Data
 
-# Open log files
 # Step 1: Function to find all of the files in the directory and add them to a list.
-
-
 def list_all_files(downloaded_directory):
     file_list = []
     for root, directories, files in os.walk(downloaded_directory):
@@ -83,50 +80,32 @@ def list_all_files(downloaded_directory):
                 file_list.append(os.path.join(root, file))
     return file_list
 
-# Step 2: Function to write the contents of a file to a tsv file.
-
+# Step 2: Functions to write the contents of a file to a tsv file.
+def write_tsv_rows(open_mode, tsv_path, gz_path):
+    with open(tsv_path, open_mode) as output_file, gzip.open(gz_path, 'rt') as json_file:
+        json_dict = json.load(json_file)
+        cleaned_dict = json_dict['Records'][0]
+        cleaned_dict = json_dict['Records'][0]
+        final_dict = {k: cleaned_dict[k] for k in (
+            'eventTime', 'sourceIPAddress', 'eventName')}
+        identity_dict = {k: cleaned_dict['userIdentity'].get(
+            k, None) for k in ('arn', 'accountId', 'type')}
+        final_dict.update(identity_dict)
+        tsv = csv.DictWriter(output_file, final_dict.keys(), delimiter='\t')
+        tsv.writeheader()
+        tsv.writerow(final_dict)
 
 def logs_to_tsv(tsv_path, gz_path):
     if os.path.isfile(tsv_path):
-        with open(tsv_path, 'a+') as output_file, gzip.open(gz_path, 'rt') as json_file:
-            json_dict = json.load(json_file)
-            cleaned_dict = json_dict['Records'][0]
-            final_dict = {k: cleaned_dict[k] for k in (
-                'eventTime', 'sourceIPAddress', 'eventName')}
-            identity_dict = {k: cleaned_dict['userIdentity'].get(
-                k, None) for k in ('arn', 'accountId', 'type')}
-            final_dict.update(identity_dict)
-            tsv = csv.DictWriter(
-                output_file, final_dict.keys(), delimiter='\t')
-            tsv.writeheader()
-            tsv.writerow(final_dict)
+        write_tsv_rows('a+', tsv_path, gz_path)
     else:
-        with open(tsv_path, 'w') as output_file, gzip.open(gz_path, 'rt') as json_file:
-            json_dict = json.load(json_file)
-            cleaned_dict = json_dict['Records'][0]
-            # Build a dictionary that only has the keys and values that we care about for our analysis.
-            final_dict = {k: cleaned_dict[k] for k in (
-                'eventTime', 'sourceIPAddress', 'eventName')}
-            identity_dict = {k: cleaned_dict['userIdentity'].get(
-                k, None) for k in ('arn', 'accountId', 'type')}
-            final_dict.update(identity_dict)
-            # Write to tsv file.
-            tsv = csv.DictWriter(
-                output_file, final_dict.keys(), delimiter='\t')
-            tsv.writeheader()
-            tsv.writerow(final_dict)
+        write_tsv_rows('w', tsv_path, gz_path)
 
-
-# Try it out on a file.
-logs_to_tsv('output.tsv', 'test/AWSLogs/653711331788/CloudTrail/us-east-1/2018/11/28/653711331788_CloudTrail_us-east-1_20181128T2310Z_rp9i9zxR2Vcpqfnz.json.gz')
-
-# Step 3: Combine the two.  Find all of the files in the directory and use logs_to_csv() to update the tsv file with those logs.
-
-
+# Step 3: Combine the two.  Find all of the files in the directory and update the tsv file with those logs.
 def write_to_tsv(target_tsv, source_directory):
     files = list_all_files(source_directory)
     for file in files:
         logs_to_tsv(target_tsv, file)
 
-
+# Create tsv file with the target logs.
 write_to_tsv('target_logs.tsv', 'test')
