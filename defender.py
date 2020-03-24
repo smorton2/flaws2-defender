@@ -5,6 +5,7 @@ import os
 import json
 import csv
 import gzip
+from pprint import pprint
 
 # Objective 1: Download CloudTrail logs
 # Step1: Setup CLI.
@@ -72,6 +73,8 @@ print(s3_client_target_security.list_buckets())
 # Objective 3: Read Log Data
 
 # Step 1: Function to find all of the files in the directory and add them to a list.
+
+
 def list_all_files(downloaded_directory):
     file_list = []
     for root, directories, files in os.walk(downloaded_directory):
@@ -81,10 +84,11 @@ def list_all_files(downloaded_directory):
     return file_list
 
 # Step 2: Functions to write the contents of a file to a tsv file.
+
+
 def write_tsv_rows(open_mode, tsv_path, gz_path):
     with open(tsv_path, open_mode) as output_file, gzip.open(gz_path, 'rt') as json_file:
         json_dict = json.load(json_file)
-        cleaned_dict = json_dict['Records'][0]
         cleaned_dict = json_dict['Records'][0]
         final_dict = {k: cleaned_dict[k] for k in (
             'eventTime', 'sourceIPAddress', 'eventName')}
@@ -95,6 +99,7 @@ def write_tsv_rows(open_mode, tsv_path, gz_path):
         tsv.writeheader()
         tsv.writerow(final_dict)
 
+
 def logs_to_tsv(tsv_path, gz_path):
     if os.path.isfile(tsv_path):
         write_tsv_rows('a+', tsv_path, gz_path)
@@ -102,10 +107,43 @@ def logs_to_tsv(tsv_path, gz_path):
         write_tsv_rows('w', tsv_path, gz_path)
 
 # Step 3: Combine the two.  Find all of the files in the directory and update the tsv file with those logs.
+
+
 def write_to_tsv(target_tsv, source_directory):
     files = list_all_files(source_directory)
     for file in files:
         logs_to_tsv(target_tsv, file)
 
+
 # Create tsv file with the target logs.
 write_to_tsv('target_logs.tsv', 'test')
+
+# Objective 4: Identify credential theft.
+
+# Step 1: Search the first suspicious call.
+
+
+def find_event(event_name, source_directory):
+    files = list_all_files(source_directory)
+    for file in files:
+        with gzip.open(file, 'rt') as json_file:
+            json_dict = json.load(json_file)
+            cleaned_dict = json_dict['Records'][0]
+            if cleaned_dict['eventName'] == event_name:
+                pprint(cleaned_dict)
+
+
+# Print the json object for the event that we're interested in.
+find_event('ListBuckets', 'test')
+
+# Step 2: Get details for the suspicious role.
+
+
+def get_role_details(profile, role):
+    iam_client = boto3.Session(profile_name=profile).client('iam')
+    iam_role = iam_client.get_role(RoleName=role)
+    pprint(iam_role)
+
+
+# Print role details for level3
+get_role_details('target_security', 'level3')
