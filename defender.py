@@ -89,15 +89,17 @@ def list_all_files(downloaded_directory):
 def write_tsv_rows(open_mode, tsv_path, gz_path):
     with open(tsv_path, open_mode) as output_file, gzip.open(gz_path, 'rt') as json_file:
         json_dict = json.load(json_file)
-        cleaned_dict = json_dict['Records'][0]
-        final_dict = {k: cleaned_dict[k] for k in (
-            'eventTime', 'sourceIPAddress', 'eventName')}
-        identity_dict = {k: cleaned_dict['userIdentity'].get(
-            k, None) for k in ('arn', 'accountId', 'type')}
-        final_dict.update(identity_dict)
-        tsv = csv.DictWriter(output_file, final_dict.keys(), delimiter='\t')
-        tsv.writeheader()
-        tsv.writerow(final_dict)
+        for record in json_dict['Records']:
+            cleaned_dict = record
+            final_dict = {k: cleaned_dict[k] for k in (
+                'eventTime', 'sourceIPAddress', 'eventName')}
+            identity_dict = {k: cleaned_dict['userIdentity'].get(
+                k, None) for k in ('arn', 'accountId', 'type')}
+            final_dict.update(identity_dict)
+            tsv = csv.DictWriter(output_file, final_dict.keys(), delimiter='\t')
+            if open_mode == 'w':
+                tsv.writeheader()
+            tsv.writerow(final_dict)
 
 
 def logs_to_tsv(tsv_path, gz_path):
@@ -128,9 +130,10 @@ def find_event(event_name, source_directory):
     for file in files:
         with gzip.open(file, 'rt') as json_file:
             json_dict = json.load(json_file)
-            cleaned_dict = json_dict['Records'][0]
-            if cleaned_dict['eventName'] == event_name:
-                pprint(cleaned_dict)
+            for record in json_dict['Records']:
+                cleaned_dict = record
+                if cleaned_dict['eventName'] == event_name:
+                    pprint(cleaned_dict)
 
 
 # Print the json object for the event that we're interested in.
@@ -147,3 +150,18 @@ def get_role_details(profile, role):
 
 # Print role details for level3
 get_role_details('target_security', 'level3')
+
+# Objective 5: Identify the public resource.
+
+# Step 1: View the ListImages call event.
+find_event('ListImages', 'test')
+
+# Step 2: Check the policy.
+
+def get_policy_details(profile, repository):
+   ecr_client = boto3.Session(profile_name=profile).client('ecr')
+   ecr_policy = ecr_client.get_repository_policy(repositoryName=repository)
+   pprint(ecr_policy)
+
+# Print the policy details.
+get_policy_details('target_security', 'level2')
