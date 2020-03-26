@@ -7,13 +7,7 @@ SELECT event_name,
 ;
 
 -- What percentage of events are errors?
-SELECT COUNT(1) AS errors
-  FROM cloudtrail
- WHERE error_code <> 'None'
-;
-
--- What percentage of events are errors?  (another way)
-SELECT COUNT(CASE WHEN error_code <> 'None' THEN error_code ELSE NULL END) AS errors
+SELECT 100.0 * COUNT(CASE WHEN error_code <> 'None' THEN error_code ELSE NULL END) / COUNT(*) AS pct_errors
   FROM cloudtrail
 ;
 
