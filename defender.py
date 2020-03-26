@@ -6,6 +6,9 @@ import json
 import csv
 import gzip
 from pprint import pprint
+import sqlite3
+from sqlite3 import Error
+import pandas as pd
 
 # Objective 1: Download CloudTrail logs
 # Step1: Setup CLI.
@@ -165,3 +168,67 @@ def get_policy_details(profile, repository):
 
 # Print the policy details.
 get_policy_details('target_security', 'level2')
+
+# Objective 6: Query the logs.
+conn = sqlite3.connect('logs')
+c = conn.cursor()
+
+# Create SQL Table.
+create_table_sql = '''
+CREATE TABLE IF NOT EXISTS cloudtrail (
+    event_id TEXT PRIMARY KEY,
+    event_version TEXT,
+    event_type TEXT,
+    event_time TEXT,
+    event_source TEXT,
+    event_name TEXT,
+    user_identity TEXT,
+    aws_region TEXT,
+    source_ip_address TEXT,
+    user_agent TEXT,
+    error_code TEXT,
+    error_message TEXT,
+    request_parameters TEXT,
+    response_elements TEXT,
+    additional_event_data TEXT,
+    request_id TEXT,
+    resources TEXT,
+    api_version TEXT,
+    read_only TEXT,
+    recipient_account_id TEXT,
+    service_event_details TEXT,
+    shared_event_id,
+    vpc_endpoint_id TEXT
+);'''
+
+c.execute(create_table_sql)
+c.close()
+
+sql_columns = ['eventID', 'eventVersion', 'eventType', 'eventTime', 'eventSource', 'eventName',
+               'userIdentity', 'awsRegion', 'sourceIPAddress', 'userAgent', 'errorCode',
+               'errorMessage', 'requestParameters', 'responseElements', 'additionalEventData',
+               'requestId', 'resources', 'apiVersion', 'readOnly', 'recipientAccountID',
+               'serviceEventDetails', 'sharedEventID', 'vpcEndpointID']
+
+# Insert data into SQL table. 
+def write_sql_table(gz_path):
+    json_file = gzip.open(gz_path, 'rt') 
+    json_dict = json.load(json_file)
+    query = 'INSERT INTO cloudtrail VALUES(' + ','.join('?' * len(sql_columns)) + ');'
+    record = json_dict['Records']
+    for record in json_dict['Records']:
+        # Prep record for insert.
+        values = tuple(record.get(c, None) for c in sql_columns)
+        str_values = tuple(map(str, values))
+        # Connect to database and insert record.
+        db = sqlite3.connect('logs')
+        c = db.cursor()
+        c.execute(query, str_values)
+        db.commit()
+
+# write_sql_table('test/AWSLogs/653711331788/CloudTrail/us-east-1/2018/11/28/653711331788_CloudTrail_us-east-1_20181128T2310Z_A1lhv3sWzzRIBFVk.json.gz')
+
+files = list_all_files('test')
+for file in files:
+    write_sql_table(file)
+
