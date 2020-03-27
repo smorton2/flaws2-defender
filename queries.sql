@@ -26,6 +26,7 @@ SELECT CASE
   FROM cloudtrail
 ),
 last_event AS (
+-- This window function requires sqlite3 version 3.25 or later.
 SELECT account_id,
        event_time,
        LAG(event_time) OVER (PARTITION BY account_id ORDER BY event_time) AS time_of_last_event
