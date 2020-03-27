@@ -137,12 +137,12 @@ def get_policy_details(profile, repository):
     pprint(ecr_policy)
 
 
-def create_log_table(database, tablename):
+def create_log_table(database):
     conn = sqlite3.connect(database)
     c = conn.cursor()
     # Create SQL Table.
-    create_table_sql = f'''
-    CREATE TABLE IF NOT EXISTS {tablename} (
+    create_table_sql = '''
+    CREATE TABLE IF NOT EXISTS cloudtrail (
         event_id TEXT PRIMARY KEY,
         event_version TEXT,
         event_type TEXT,
@@ -256,7 +256,7 @@ def main():
 
     # Objective 6: Query the logs.
 
-    create_log_table('logs', 'cloudtrail')
+    create_log_table('logs')
 
     sql_files = list_all_files('test')
     for file in sql_files:
