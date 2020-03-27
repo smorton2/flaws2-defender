@@ -142,7 +142,7 @@ def create_log_table(database, tablename):
     c = conn.cursor()
     # Create SQL Table.
     create_table_sql = f'''
-    CREATE TABLE IF NOT EXISTS {tablename} (
+    CREATE TABLE IF NOT EXISTS cloudtrail (
         event_id TEXT PRIMARY KEY,
         event_version TEXT,
         event_type TEXT,
