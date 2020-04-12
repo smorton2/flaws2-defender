@@ -19,7 +19,6 @@ import sqlite3
 from sqlite3 import Error
 
 
-
 def define_session_clients(account):
     """ Defines the AWS session and relevant clients for a profile.
 
@@ -48,7 +47,7 @@ def list_bucket_names(s3_client):
 
 
 def define_bucket(session, bucket):
-    """ Returns an s3 bucket object for a session and bucket. """ 
+    """ Returns an s3 bucket object for a session and bucket. """
     s3_resource = session.resource('s3')
     return s3_resource.Bucket(bucket)
 
@@ -85,7 +84,7 @@ def s3_sync(bucket, target_directory):
 
 def list_all_files(downloaded_directory):
     """ Returns a list of the gzip files in a directory.
-    
+
     Args:
         downloaded_directory (str): The name of the directory to search for gzip files.
 
