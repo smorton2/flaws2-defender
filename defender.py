@@ -7,7 +7,6 @@ The script assumes that you have set up access to an AWS account through the com
 
 The script requires the following packages be installed in the Python environment you are working in:
   - boto3
-  - pandas
 """
 
 import boto3
@@ -18,9 +17,7 @@ import gzip
 from pprint import pprint
 import sqlite3
 from sqlite3 import Error
-import pandas as pd
 
-# Define sessions for security and target security.
 
 
 def define_session_clients(account):
@@ -42,10 +39,6 @@ def define_session_clients(account):
     ecr_client = session.client('ecr')
     return session, sts_client, s3_client, iam_client, ecr_client
 
-# Step2: Download the logs from the flaws2-logs bucket.
-
-# List the bucket names in the security session.
-
 
 def list_bucket_names(s3_client):
     """ Prints the names of the s3 buckets owned by an AWS profile. """
@@ -53,23 +46,17 @@ def list_bucket_names(s3_client):
     for bucket in buckets['Buckets']:
         print(bucket['Name'])
 
-# Define the flaws2-logs bucket.
-
 
 def define_bucket(session, bucket):
     """ Returns an s3 bucket object for a session and bucket. """ 
     s3_resource = session.resource('s3')
     return s3_resource.Bucket(bucket)
 
-# Function to list files in an s3 bucket
-
 
 def s3_ls(bucket):
     """ Prints the ObjectSummary of each object in an s3 bucket. """
     for bucket_obj in bucket.objects.all():
         print(bucket_obj)
-
-# Function to download files from an s3 bucket
 
 
 def s3_sync(bucket, target_directory):
@@ -95,8 +82,6 @@ def s3_sync(bucket, target_directory):
             bucket.download_file(obj_filename, os.path.join(
                 target_directory, obj_filename))
 
-# Step 1: Function to find all of the files in the directory and add them to a list.
-
 
 def list_all_files(downloaded_directory):
     """ Returns a list of the gzip files in a directory.
@@ -113,8 +98,6 @@ def list_all_files(downloaded_directory):
             if '.gz' in file:
                 file_list.append(os.path.join(root, file))
     return file_list
-
-# Step 2: Functions to write the contents of a file to a tsv file.
 
 
 def write_tsv_rows(open_mode, tsv_path, gz_path):
@@ -151,16 +134,12 @@ def logs_to_tsv(tsv_path, gz_path):
     else:
         write_tsv_rows('w', tsv_path, gz_path)
 
-# Step 3: Combine the two.  Find all of the files in the directory and update the tsv file with those logs.
-
 
 def write_to_tsv(target_tsv, source_directory):
     """ Finds all of the gzip files in a directory and writes their contents to a tsv file. """
     files = list_all_files(source_directory)
     for file in files:
         logs_to_tsv(target_tsv, file)
-
-# Step 1: Search the first suspicious call.
 
 
 def find_event(event_name, source_directory):
@@ -182,16 +161,12 @@ def find_event(event_name, source_directory):
                 if cleaned_dict['eventName'] == event_name:
                     pprint(cleaned_dict)
 
-# Step 2: Get details for the suspicious role.
-
 
 def get_role_details(profile, role):
     """ Prints information about a profile's IAM role. """
     iam_client = boto3.Session(profile_name=profile).client('iam')
     iam_role = iam_client.get_role(RoleName=role)
     pprint(iam_role)
-
-# Step 2: Check the policy.
 
 
 def get_policy_details(profile, repository):
@@ -242,8 +217,6 @@ sql_columns = ['eventID', 'eventVersion', 'eventType', 'eventTime', 'eventSource
                'requestId', 'resources', 'apiVersion', 'readOnly', 'recipientAccountID',
                'serviceEventDetails', 'sharedEventID', 'vpcEndpointID']
 
-# Insert data into SQL table.
-
 
 def write_sql_table(gz_path):
     json_file = gzip.open(gz_path, 'rt')
@@ -260,8 +233,6 @@ def write_sql_table(gz_path):
         c = db.cursor()
         c.execute(query, str_values)
         db.commit()
-
-# write_sql_table('test/AWSLogs/653711331788/CloudTrail/us-east-1/2018/11/28/653711331788_CloudTrail_us-east-1_20181128T2310Z_A1lhv3sWzzRIBFVk.json.gz')
 
 
 def main():
