@@ -76,11 +76,11 @@ def s3_sync(bucket, target_directory):
         os.makedirs(nested_directory)
     files = set(os.listdir(nested_directory))
     print(nested_directory)
+    # Download files that are present in the AWS bucket but not the local directory.
     for obj in bucket.objects.all():
-        obj_filename = obj.key
-        if obj_filename not in files:
-            bucket.download_file(obj_filename, os.path.join(
-                target_directory, obj_filename))
+        if obj.key not in files:
+            bucket.download_file(obj.key, os.path.join(
+                target_directory, obj.key))
 
 
 def list_all_files(downloaded_directory):
@@ -114,10 +114,9 @@ def write_tsv_rows(open_mode, tsv_path, gz_path):
     with open(tsv_path, open_mode) as output_file, gzip.open(gz_path, 'rt') as json_file:
         json_dict = json.load(json_file)
         for record in json_dict['Records']:
-            cleaned_dict = record
-            final_dict = {k: cleaned_dict[k] for k in (
+            final_dict = {k: record[k] for k in (
                 'eventTime', 'sourceIPAddress', 'eventName')}
-            identity_dict = {k: cleaned_dict['userIdentity'].get(
+            identity_dict = {k: record['userIdentity'].get(
                 k, None) for k in ('arn', 'accountId', 'type')}
             final_dict.update(identity_dict)
             tsv = csv.DictWriter(
